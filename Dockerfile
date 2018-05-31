@@ -1,7 +1,18 @@
-FROM gliderlabs/alpine:3.4
+FROM golang:alpine AS build
 
-RUN apk add --no-cache ca-certificates
+COPY . /go/src/github.com/Zipcar/lambda-resource
 
-ADD bin/lambda-resource-linux-amd64 /opt/resource/out
+RUN cd /go/src/github.com/Zipcar/lambda-resource && \
+    go build -o /go/src/github.com/Zipcar/lambda-resource/bin/lambda-resource-linux-amd64
 
-RUN cd /opt/resource && ln -s out check && ln -s out in
+
+FROM alpine:edge AS resource
+
+COPY --from=build /go/src/github.com/Zipcar/lambda-resource/bin/lambda-resource-linux-amd64 /opt/resource/check
+
+RUN apk add --no-cache ca-certificates && \
+    cd /opt/resource && \
+    ln -s check out && \
+    ln -s check in
+
+FROM resource
